@@ -34,6 +34,7 @@ def main() -> None:
         repo_type="space",
         token=token,
         commit_message="Deploy Space",
+        ignore_patterns=[".venv/**", "**/__pycache__/**", ".git/**"],
     )
 
     print(f"Deployed: https://huggingface.co/spaces/{repo_id}")
