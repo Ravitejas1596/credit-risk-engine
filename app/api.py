@@ -60,6 +60,7 @@ def score(profile: CreditProfile) -> Dict[str, Any]:
             "base_value": res.base_value,
             "values": res.shap_values,
             "feature_names": res.feature_names,
+            "x_values": res.x_values,
         },
     }
 

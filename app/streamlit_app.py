@@ -76,8 +76,14 @@ if run:
     values = np.array(shap_blob["values"], dtype=float)
     base = float(shap_blob["base_value"])
     names = list(shap_blob["feature_names"])
+    x_values = np.array(shap_blob.get("x_values", []), dtype=float)
 
-    exp = shap.Explanation(values=values, base_values=base, feature_names=names)
+    exp = shap.Explanation(
+        values=values,
+        base_values=base,
+        data=x_values if x_values.size else None,
+        feature_names=names,
+    )
 
     fig = plt.figure(figsize=(10, 4))
     shap.plots.waterfall(exp, max_display=12, show=False)

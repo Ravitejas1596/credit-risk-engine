@@ -18,6 +18,7 @@ class ScoreResult:
     shap_values: List[float]
     base_value: float
     feature_names: List[str]
+    x_values: List[float]
 
 
 class CreditRiskEngine:
@@ -37,6 +38,11 @@ class CreditRiskEngine:
     def score(self, features: Dict[str, Any], top_k: int = 8) -> ScoreResult:
         df = pd.DataFrame([features])
         X = self.pre.transform(df)
+        if hasattr(X, "toarray"):
+            X_dense = X.toarray()
+        else:
+            X_dense = np.asarray(X)
+        x_row = np.array(X_dense).reshape(-1)
 
         p = float(self.cal.predict_proba(X)[:, 1][0])
 
@@ -62,7 +68,7 @@ class CreditRiskEngine:
                     "feature": names[int(idx)],
                     "contribution": float(shap_vals_1d[int(idx)]),
                     "abs_contribution": float(abs(shap_vals_1d[int(idx)])),
-                    "value": float(X[0, int(idx)]) if hasattr(X, "__getitem__") else None,
+                    "value": float(x_row[int(idx)]) if int(idx) < len(x_row) else None,
                 }
             )
 
@@ -73,5 +79,6 @@ class CreditRiskEngine:
             shap_values=[float(v) for v in shap_vals_1d.tolist()],
             base_value=base,
             feature_names=names,
+            x_values=[float(v) for v in x_row.tolist()],
         )
 
