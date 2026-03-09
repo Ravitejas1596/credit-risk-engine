@@ -10,7 +10,13 @@ import requests
 import shap
 import streamlit as st
 
-from .model import CreditRiskEngine
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
+from app.model import CreditRiskEngine  # type: ignore  # noqa: E402
 
 
 API_URL = os.environ.get("CREDIT_API_URL", "").strip() or None
