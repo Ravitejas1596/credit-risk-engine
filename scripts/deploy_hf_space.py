@@ -4,10 +4,11 @@ import os
 from pathlib import Path
 
 from huggingface_hub import HfApi, upload_folder
+from huggingface_hub.utils import HfFolder
 
 
 def main() -> None:
-    token = os.environ.get("HF_TOKEN")
+    token = os.environ.get("HF_TOKEN") or HfFolder.get_token()
     if not token:
         raise RuntimeError("Set HF_TOKEN in your shell (do not hardcode it).")
 
