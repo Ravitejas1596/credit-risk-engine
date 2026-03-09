@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,14 +10,38 @@ import requests
 import shap
 import streamlit as st
 
+from app.model import CreditRiskEngine
 
-API_URL = os.environ.get("CREDIT_API_URL", "http://127.0.0.1:8000")
+
+API_URL = os.environ.get("CREDIT_API_URL", "").strip() or None
+_engine: Optional[CreditRiskEngine] = None
 
 
 def _score(payload: Dict[str, Any]) -> Dict[str, Any]:
-    r = requests.post(f"{API_URL}/score", json=payload, timeout=30)
-    r.raise_for_status()
-    return r.json()
+    # If an explicit API URL is configured, use the FastAPI service.
+    if API_URL:
+        r = requests.post(f"{API_URL}/score", json=payload, timeout=30)
+        r.raise_for_status()
+        return r.json()
+
+    # Otherwise, run the model in-process (useful for Hugging Face Spaces).
+    global _engine
+    if _engine is None:
+        artifacts_path = Path(__file__).resolve().parents[1] / "artifacts" / "model.joblib"
+        _engine = CreditRiskEngine(artifacts_path)
+
+    res = _engine.score(payload, top_k=8)
+    return {
+        "probability_default": res.probability,
+        "decision": res.decision,
+        "top_factors": res.top_factors,
+        "shap": {
+            "base_value": res.base_value,
+            "values": res.shap_values,
+            "feature_names": res.feature_names,
+            "x_values": res.x_values,
+        },
+    }
 
 
 st.set_page_config(page_title="Credit Risk Engine", layout="wide")
@@ -24,8 +49,11 @@ st.title("Credit Risk Engine")
 st.caption("XGBoost + calibrated probabilities + SHAP explainability")
 
 with st.sidebar:
-    st.subheader("API")
-    st.write(f"Using: `{API_URL}`")
+    st.subheader("Backend mode")
+    if API_URL:
+        st.write(f"Calling FastAPI at `{API_URL}`")
+    else:
+        st.write("Using in-process model inside Streamlit")
 
 col1, col2, col3 = st.columns(3)
 
