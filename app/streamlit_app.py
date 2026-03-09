@@ -10,7 +10,7 @@ import requests
 import shap
 import streamlit as st
 
-from app.model import CreditRiskEngine
+from .model import CreditRiskEngine
 
 
 API_URL = os.environ.get("CREDIT_API_URL", "").strip() or None
