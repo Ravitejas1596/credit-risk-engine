@@ -17,7 +17,6 @@ kaggle.json
 
 # data & artifacts
 data/
-artifacts/
 reports/
 
 # streamlit
