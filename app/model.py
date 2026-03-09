@@ -2,12 +2,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import joblib
 import numpy as np
 import pandas as pd
 import shap
+
+
+def _add_features_for_inference(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Mirror the feature engineering used during training (scripts/train.py._add_features)
+    so that the ColumnTransformer sees the expected columns.
+    """
+    df = df.copy()
+
+    late_30_59 = df.get("NumberOfTime30-59DaysPastDueNotWorse")
+    late_60_89 = df.get("NumberOfTime60-89DaysPastDueNotWorse")
+    late_90 = df.get("NumberOfTimes90DaysLate")
+    if late_30_59 is not None and late_60_89 is not None and late_90 is not None:
+        df["delinquency_total"] = late_30_59.fillna(0) + late_60_89.fillna(0) + late_90.fillna(0)
+        df["severe_delinquency"] = late_60_89.fillna(0) + 2 * late_90.fillna(0)
+
+    if "MonthlyIncome" in df.columns and "DebtRatio" in df.columns:
+        df["debt_burden"] = df["DebtRatio"] * df["MonthlyIncome"].fillna(df["MonthlyIncome"].median())
+
+    if "NumberOfOpenCreditLinesAndLoans" in df.columns and "NumberRealEstateLoansOrLines" in df.columns:
+        df["real_estate_share"] = (
+            df["NumberRealEstateLoansOrLines"].fillna(0) / (df["NumberOfOpenCreditLinesAndLoans"].fillna(0) + 1.0)
+        )
+
+    return df
 
 
 @dataclass(frozen=True)
@@ -37,6 +62,7 @@ class CreditRiskEngine:
 
     def score(self, features: Dict[str, Any], top_k: int = 8) -> ScoreResult:
         df = pd.DataFrame([features])
+        df = _add_features_for_inference(df)
         X = self.pre.transform(df)
         if hasattr(X, "toarray"):
             X_dense = X.toarray()
